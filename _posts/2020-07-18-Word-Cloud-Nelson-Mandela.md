@@ -198,8 +198,8 @@ image = cloud.to_array()
 # matplotlib
 plt.imshow(image, interpolation = 'nearest')
 plt.axis('off')
-# plt.show()
-plt.savefig('mandela-wordcloud.png')
+plt.show()
+# plt.savefig('mandela-wordcloud.png')
 ```
 
 ![Nelson Mandela](./../images/mandela-word.png)
