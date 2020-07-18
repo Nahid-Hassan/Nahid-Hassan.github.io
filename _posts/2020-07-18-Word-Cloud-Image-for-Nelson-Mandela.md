@@ -1,5 +1,5 @@
 ---
-title: "Word-cloud image for Nelson Mendala"
+title: "Word-cloud image for Nelson Mandela"
 date: 2019-12-14
 tags: [Python]
 header:
