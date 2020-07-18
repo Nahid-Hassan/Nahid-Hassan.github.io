@@ -7,8 +7,6 @@ header:
 excerpt: "Word Cloud"
 mathjax: "true"
 ---
-
-# Let's create a word cloud image for Nelson Mandela
 Nelson Rolihlahla Mandela, whose name of Xhosa origin means”to pull the branch of a tree” (interpreted by the natives as “troublemaker”), and universally known as Nelson Mandela or Madiba.
 
 Mandela was born on July 18, 1918, in Mvezo, South Africa, in the small town of Mvezo in the O.R. Tambo district of the Eastern Cape, on the banks of the Mbashe River near Umtata. He died on 5 December 2013 at the age of 95.
