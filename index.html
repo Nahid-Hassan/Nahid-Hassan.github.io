@@ -1,0 +1,530 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Simple Stock Manager</title>
+  <style>
+    :root{
+      --bg:#0f1724; --card:#0b1220; --muted:#9aa4b2; --accent:#6ee7b7; --danger:#ff6b6b;
+      --glass: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+    }
+    body{ margin:0; min-height:100vh; background:linear-gradient(180deg,#071129 0%, #071224 60%); color:#e6eef6; }
+    header{ padding:18px 28px; display:flex; gap:16px; align-items:center; border-bottom:1px solid rgba(255,255,255,0.03); background:rgba(3,7,12,0.2); }
+    header h1{ margin:0; font-size:18px; letter-spacing:0.2px; font-weight:600; }
+    .container{ max-width:1100px; margin:24px auto; padding:20px; }
+    .grid{ display:grid; grid-template-columns: 360px 1fr; gap:18px; }
+    .card{ background:var(--card); border-radius:12px; padding:14px; box-shadow: 0 6px 18px rgba(2,6,12,0.6); border:1px solid rgba(255,255,255,0.02); }
+    label{ display:block; font-size:13px; color:var(--muted); margin-bottom:6px; }
+    input[type=text], input[type=number], select{ width:100%; padding:8px 10px; border-radius:8px; border:1px solid rgba(255,255,255,0.04); background:transparent; color:inherit; outline:none; font-size:14px; }
+    button{ background:linear-gradient(90deg,#0ea5a1,#34d399); border:none; color:#022; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; }
+    button.ghost{ background:transparent; color:var(--accent); border:1px solid rgba(110,231,183,0.14); }
+    button.warn{ background:var(--danger); color:white; }
+    .small{ font-size:13px; padding:6px 10px; border-radius:8px; }
+    .muted{ color:var(--muted); font-size:13px; }
+    .product-list{ max-height:560px; overflow:auto; margin-top:12px; display:flex; flex-direction:column; gap:10px; }
+    .product-item{ padding:10px; border-radius:8px; background: linear-gradient(180deg, rgba(255,255,255,0.01), transparent); display:flex; gap:10px; align-items:flex-start; justify-content:space-between; }
+    .variant{ margin-top:8px; padding:8px; border-radius:8px; background:rgba(255,255,255,0.015); display:flex; align-items:center; gap:8px; }
+    .row{ display:flex; gap:10px; align-items:center; }
+    .flex{ display:flex; gap:10px; align-items:center; }
+    table{ width:100%; border-collapse:collapse; font-size:13px; color:inherit; }
+    th, td{ padding:8px 6px; text-align:left; border-bottom:1px dashed rgba(255,255,255,0.03); }
+    .tabs{ display:flex; gap:8px; margin-bottom:12px; }
+    .tab{ padding:8px 10px; border-radius:8px; background:transparent; cursor:pointer; color:var(--muted); }
+    .tab.active{ background:rgba(255,255,255,0.03); color:var(--accent); border:1px solid rgba(110,231,183,0.08); }
+    footer{ margin-top:18px; color:var(--muted); font-size:13px; text-align:center; }
+    .actions{ display:flex; gap:8px; flex-wrap:wrap; }
+    .controls{ display:flex; gap:8px; margin-top:12px; }
+    .search{ display:flex; gap:8px; align-items:center; }
+    pre { white-space:pre-wrap; word-break:break-word; background:rgba(255,255,255,0.02); padding:10px; border-radius:8px; font-size:13px; }
+    .badge{ padding:4px 8px; border-radius:999px; font-size:12px; background:rgba(255,255,255,0.03); color:var(--muted); }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Stock Manager — Simple (localStorage)</h1>
+    <div style="flex:1"></div>
+    <div class="muted">Products: <span id="productCount">0</span></div>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+      <!-- LEFT: Product + Variant management -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:700">Add Product</div>
+            <div class="muted">Create a product, then add types/variants</div>
+          </div>
+          <div class="muted">Local only</div>
+        </div>
+
+        <div style="margin-top:12px">
+          <label>Product Name</label>
+          <input id="productName" type="text" placeholder="e.g. Shampoo">
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button id="addProductBtn" class="small">Add Product</button>
+            <button id="exportBtn" class="small ghost">Export JSON</button>
+            <button id="resetBtn" class="small ghost" title="Clear all data">Reset</button>
+          </div>
+        </div>
+
+        <hr style="border:none; margin:12px 0; border-top:1px solid rgba(255,255,255,0.02)">
+
+        <div>
+          <div style="font-weight:700">Add Variant (Type)</div>
+          <div class="muted">Select product, add a type & starting stock</div>
+          <label style="margin-top:10px">Select Product</label>
+          <select id="productSelect"></select>
+          <label style="margin-top:8px">Variant / Type name</label>
+          <input id="variantName" type="text" placeholder="e.g. 200ml - Blue">
+          <label style="margin-top:8px">Initial Stock (qty)</label>
+          <input id="variantStock" type="number" value="0" min="0">
+          <label style="margin-top:8px">Expected daily out (auto-subtract at EOD)</label>
+          <input id="variantDailyOut" type="number" value="0" min="0">
+          <div style="display:flex; gap:8px; margin-top:8px;">
+            <button id="addVariantBtn" class="small">Add Variant</button>
+            <button id="importBtn" class="small ghost">Import JSON</button>
+          </div>
+          <div class="muted" style="margin-top:8px">Expected daily out is your business rule — the amount automatically deducted when you press End of Day</div>
+        </div>
+
+        <div style="margin-top:12px" class="muted">Quick actions</div>
+        <div class="controls">
+          <button id="endOfDayBtn" class="small warn">End of Day Process</button>
+          <button id="clearTransactionsBtn" class="small ghost">Clear Transactions</button>
+        </div>
+      </div>
+
+      <!-- RIGHT: Dashboard, list, transactions -->
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <div>
+            <div style="font-weight:700">Dashboard</div>
+            <div class="muted">Products, variants, current stock & history</div>
+          </div>
+
+          <div class="flex">
+            <div class="search">
+              <input id="searchInput" type="text" placeholder="Search product or variant" style="padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.03); background:transparent; color:inherit;">
+            </div>
+            <div class="badge" id="lastRunBadge">Last EOD: -</div>
+          </div>
+        </div>
+
+        <div style="margin-top:14px" class="tabs">
+          <div class="tab active" data-tab="products">Products</div>
+          <div class="tab" data-tab="transactions">Transactions</div>
+          <div class="tab" data-tab="report">Report</div>
+        </div>
+
+        <div id="tabProducts">
+          <div class="product-list" id="productList"></div>
+        </div>
+
+        <div id="tabTransactions" style="display:none">
+          <div style="display:flex; gap:10px; align-items:center; margin-bottom:10px;">
+            <div class="muted">Filter:</div>
+            <select id="transFilterType"><option value="all">All</option><option value="in">Stock In</option><option value="out">Stock Out</option><option value="auto">Auto Out (EOD)</option></select>
+            <select id="transFilterProduct"><option value="all">All Products</option></select>
+            <input id="transStart" type="date"><input id="transEnd" type="date">
+            <button id="applyFilter" class="small ghost">Apply</button>
+            <button id="exportTrans" class="small">Export CSV</button>
+          </div>
+          <div style="max-height:520px; overflow:auto;">
+            <table id="transTable">
+              <thead><tr><th>Date</th><th>Type</th><th>Product</th><th>Variant</th><th>Qty</th><th>Note</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <div id="tabReport" style="display:none">
+          <div style="display:flex; gap:8px; margin-bottom:12px; align-items:center;">
+            <div class="muted">Select Product</div>
+            <select id="reportProduct"><option value="all">All</option></select>
+            <button id="refreshReport" class="small ghost">Refresh</button>
+            <div style="flex:1"></div>
+            <div class="muted">Total Products: <span id="totalProducts">0</span></div>
+          </div>
+
+          <div id="reportContent">
+            <table id="reportTable">
+              <thead><tr><th>Product</th><th>Variant</th><th>Opening</th><th>In</th><th>Out</th><th>Current</th><th>DailyOut</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+
+        <footer>
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:16px;">
+            <div class="muted">Built for quick inventory tracking • Data stored locally</div>
+            <div class="muted">Tip: Export JSON to back up</div>
+          </div>
+        </footer>
+      </div>
+    </div>
+  </div>
+
+  <script>
+  /**********************************************************************
+   * Simple Stock Manager
+   * Data is stored in localStorage under key "stock_manager_v1"
+   *
+   * Model:
+   *  state = {
+   *    products: [{id, name, variants:[{id,name,stock,expectedDailyOut}]}],
+   *    transactions: [{id, date, type: "in"|"out"|"auto", productId, variantId, qty, note}],
+   *    lastEOD: timestamp|null
+   *  }
+   **********************************************************************/
+  (function(){
+    // Utilities
+    const uid = (prefix='id') => prefix + '_' + Math.random().toString(36).slice(2,9);
+    const todayDateStr = (d=new Date()) => d.toISOString().slice(0,10);
+    const load = () => JSON.parse(localStorage.getItem('stock_manager_v1') || 'null') || {products:[], transactions:[], lastEOD:null};
+    const save = (s) => localStorage.setItem('stock_manager_v1', JSON.stringify(s));
+    let state = load();
+
+    // DOM refs
+    const productNameInput = document.getElementById('productName');
+    const addProductBtn = document.getElementById('addProductBtn');
+    const productSelect = document.getElementById('productSelect');
+    const variantNameInput = document.getElementById('variantName');
+    const variantStockInput = document.getElementById('variantStock');
+    const variantDailyOutInput = document.getElementById('variantDailyOut');
+    const addVariantBtn = document.getElementById('addVariantBtn');
+    const productListEl = document.getElementById('productList');
+    const productCountEl = document.getElementById('productCount');
+    const endOfDayBtn = document.getElementById('endOfDayBtn');
+    const lastRunBadge = document.getElementById('lastRunBadge');
+    const resetBtn = document.getElementById('resetBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const importBtn = document.getElementById('importBtn');
+    const searchInput = document.getElementById('searchInput');
+
+    const tabEls = document.querySelectorAll('.tab');
+    const tabProducts = document.getElementById('tabProducts');
+    const tabTransactions = document.getElementById('tabTransactions');
+    const tabReport = document.getElementById('tabReport');
+
+    const transTableBody = document.querySelector('#transTable tbody');
+    const transFilterType = document.getElementById('transFilterType');
+    const transFilterProduct = document.getElementById('transFilterProduct');
+    const transStart = document.getElementById('transStart');
+    const transEnd = document.getElementById('transEnd');
+    const applyFilterBtn = document.getElementById('applyFilter');
+    const exportTransBtn = document.getElementById('exportTrans');
+
+    const reportProductSel = document.getElementById('reportProduct');
+    const reportTableBody = document.querySelector('#reportTable tbody');
+
+    // Initialize UI
+    function refreshUI(){
+      // counts
+      productCountEl.textContent = state.products.length;
+      document.getElementById('totalProducts').textContent = state.products.length;
+
+      // populate selects
+      const options = [{value:'',text:'-- select product --'}].concat(state.products.map(p=>({value:p.id, text:p.name})));
+      productSelect.innerHTML = options.map(o=>`<option value="${o.value}">${o.text}</option>`).join('');
+      transFilterProduct.innerHTML = '<option value="all">All Products</option>' + state.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+      reportProductSel.innerHTML = '<option value="all">All</option>' + state.products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+      // last EOD
+      lastRunBadge.textContent = state.lastEOD ? 'Last EOD: ' + new Date(state.lastEOD).toLocaleString() : 'Last EOD: -';
+
+      // product list
+      const q = (searchInput.value||'').toLowerCase().trim();
+      productListEl.innerHTML = state.products
+        .filter(p => !q || p.name.toLowerCase().includes(q) || p.variants.some(v=>v.name.toLowerCase().includes(q)))
+        .map(p => {
+          const variantsHTML = p.variants.map(v => {
+            return `<div class="variant">
+              <div style="flex:1">
+                <div style="font-weight:600">${v.name}</div>
+                <div class="muted" style="font-size:12px">Stock: <strong>${v.stock}</strong> • DailyOut: ${v.expectedDailyOut}</div>
+              </div>
+              <div style="display:flex; gap:8px; align-items:center;">
+                <button class="small" data-action="in" data-product="${p.id}" data-variant="${v.id}">Add Stock In</button>
+                <button class="small ghost" data-action="out" data-product="${p.id}" data-variant="${v.id}">Manual Stock Out</button>
+                <button class="small ghost" data-action="edit-variant" data-product="${p.id}" data-variant="${v.id}">Edit</button>
+              </div>
+            </div>`;
+          }).join('');
+          return `<div class="product-item">
+            <div style="flex:1">
+              <div style="font-weight:700">${p.name}</div>
+              ${variantsHTML || '<div class="muted">No variants yet</div>'}
+            </div>
+            <div style="display:flex; flex-direction:column; gap:8px; align-items:flex-end;">
+              <div class="muted">ID: ${p.id}</div>
+              <div><button class="small ghost" data-action="delete-product" data-product="${p.id}">Delete</button></div>
+            </div>
+          </div>`;
+        }).join('') || '<div class="muted">No products yet</div>';
+
+      // transaction table
+      renderTransactions();
+
+      // report
+      renderReport();
+    }
+
+    // Save helper
+    function pushTransaction({type, productId, variantId, qty, note}){
+      const t = { id: uid('tx'), date: new Date().toISOString(), type, productId, variantId, qty, note: note||''};
+      state.transactions.unshift(t); // newest first
+      save(state);
+    }
+
+    // Add product
+    addProductBtn.addEventListener('click', ()=> {
+      const name = (productNameInput.value||'').trim();
+      if(!name){ alert('Provide product name'); return; }
+      const product = { id: uid('p'), name, variants:[] };
+      state.products.push(product);
+      save(state);
+      productNameInput.value = '';
+      refreshUI();
+    });
+
+    // Add variant
+    addVariantBtn.addEventListener('click', ()=> {
+      const pid = productSelect.value;
+      if(!pid){ alert('Select a product'); return; }
+      const pname = document.querySelector(`#productSelect option[value="${pid}"]`).textContent;
+      const vname = (variantNameInput.value||'').trim();
+      if(!vname){ alert('Variant name required'); return; }
+      const stock = Math.max(0, parseInt(variantStockInput.value||0));
+      const daily = Math.max(0, parseInt(variantDailyOutInput.value||0));
+      const product = state.products.find(p=>p.id===pid);
+      if(!product) { alert('Product not found'); return; }
+      const variant = { id: uid('v'), name: vname, stock, expectedDailyOut: daily };
+      product.variants.push(variant);
+      if(stock>0) pushTransaction({type:'in', productId: pid, variantId: variant.id, qty: stock, note:'Initial stock'});
+      save(state);
+      variantNameInput.value=''; variantStockInput.value='0'; variantDailyOutInput.value='0';
+      refreshUI();
+    });
+
+    // Product list click actions (delegation)
+    productListEl.addEventListener('click', (ev)=>{
+      const btn = ev.target.closest('button');
+      if(!btn) return;
+      const action = btn.getAttribute('data-action');
+      const pid = btn.getAttribute('data-product');
+      const vid = btn.getAttribute('data-variant');
+      if(action==='in') {
+        const qty = prompt('Enter stock in quantity (positive integer)', '1');
+        const q = parseInt(qty||'0');
+        if(!q || q<=0) return alert('Invalid qty');
+        const product = state.products.find(p=>p.id===pid);
+        const variant = product.variants.find(v=>v.id===vid);
+        variant.stock += q;
+        pushTransaction({type:'in', productId: pid, variantId: vid, qty: q, note:'Manual in'});
+        save(state); refreshUI();
+      } else if(action==='out'){
+        const qty = prompt('Enter stock out quantity (positive integer)', '1');
+        const q = parseInt(qty||'0');
+        if(!q || q<=0) return alert('Invalid qty');
+        const product = state.products.find(p=>p.id===pid);
+        const variant = product.variants.find(v=>v.id===vid);
+        const taken = Math.min(q, variant.stock);
+        variant.stock -= taken;
+        pushTransaction({type:'out', productId: pid, variantId: vid, qty: taken, note:'Manual out'});
+        save(state); refreshUI();
+      } else if(action==='delete-product'){
+        if(!confirm('Delete product and all its variants?')) return;
+        state.products = state.products.filter(p=>p.id!==pid);
+        // Optionally remove related transactions
+        state.transactions = state.transactions.filter(t=>t.productId !== pid);
+        save(state); refreshUI();
+      } else if(action==='edit-variant'){
+        const product = state.products.find(p=>p.id===pid);
+        const variant = product.variants.find(v=>v.id===vid);
+        const newName = prompt('Variant name', variant.name);
+        if(newName===null) return;
+        const newDaily = prompt('Expected daily out (numeric)', variant.expectedDailyOut);
+        if(newDaily===null) return;
+        variant.name = newName;
+        variant.expectedDailyOut = Math.max(0, parseInt(newDaily||0));
+        save(state); refreshUI();
+      }
+    });
+
+    // End of day process: for each variant subtract expectedDailyOut (not below 0).
+    endOfDayBtn.addEventListener('click', ()=> {
+      if(!confirm('Run End of Day process? This will apply expected daily out for all variants and create "auto" transactions.')) return;
+      let totalReduced=0;
+      state.products.forEach(p=>{
+        p.variants.forEach(v=>{
+          if(v.expectedDailyOut && v.expectedDailyOut>0){
+            const reduce = Math.min(v.expectedDailyOut, v.stock);
+            if(reduce>0){
+              v.stock -= reduce;
+              pushTransaction({type:'auto', productId: p.id, variantId: v.id, qty: reduce, note:'EOD auto out'});
+              totalReduced += reduce;
+            }
+          }
+        });
+      });
+      state.lastEOD = new Date().toISOString();
+      save(state);
+      alert('End of Day complete. Total auto-out qty: ' + totalReduced);
+      refreshUI();
+    });
+
+    // Reset
+    resetBtn.addEventListener('click', ()=> {
+      if(!confirm('Reset all data in localStorage?')) return;
+      state = {products:[], transactions:[], lastEOD:null};
+      save(state); refreshUI();
+    });
+
+    // Export JSON
+    exportBtn.addEventListener('click', ()=> {
+      const dataStr = JSON.stringify(state, null, 2);
+      const blob = new Blob([dataStr], {type:'application/json'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = 'stock-manager-export.json'; document.body.appendChild(a); a.click();
+      a.remove(); URL.revokeObjectURL(url);
+    });
+
+    // Import JSON
+    importBtn.addEventListener('click', ()=> {
+      const inp = document.createElement('input');
+      inp.type = 'file'; inp.accept = '.json,application/json';
+      inp.onchange = e => {
+        const file = e.target.files[0];
+        if(!file) return;
+        const reader = new FileReader();
+        reader.onload = ev => {
+          try {
+            const parsed = JSON.parse(ev.target.result);
+            if(confirm('Replace current data with imported data?')) {
+              state = parsed;
+              save(state); refreshUI();
+            }
+          } catch(err){
+            alert('Invalid JSON file');
+          }
+        };
+        reader.readAsText(file);
+      };
+      inp.click();
+    });
+
+    // Search input
+    searchInput.addEventListener('input', ()=> refreshUI());
+
+    // Tabs
+    tabEls.forEach(t => t.addEventListener('click', ()=>{
+      tabEls.forEach(x=>x.classList.remove('active'));
+      t.classList.add('active');
+      const tab = t.getAttribute('data-tab');
+      tabProducts.style.display = tab==='products' ? 'block' : 'none';
+      tabTransactions.style.display = tab==='transactions' ? 'block' : 'none';
+      tabReport.style.display = tab==='report' ? 'block' : 'none';
+      // refresh certain pieces
+      renderTransactions(); renderReport();
+    }));
+
+    // Transactions rendering & filtering
+    function renderTransactions(){
+      const typeFilter = transFilterType.value;
+      const prodFilter = transFilterProduct.value;
+      const start = transStart.value ? new Date(transStart.value) : null;
+      const end = transEnd.value ? new Date(transEnd.value) : null;
+      let rows = state.transactions.slice(); // newest first
+      rows = rows.filter(t => (typeFilter==='all' || t.type===typeFilter));
+      rows = rows.filter(t => (prodFilter==='all' || t.productId===prodFilter));
+      if(start) rows = rows.filter(t => new Date(t.date) >= start);
+      if(end) { const ed = new Date(end); ed.setDate(ed.getDate()+1); rows = rows.filter(t => new Date(t.date) < ed); }
+      transTableBody.innerHTML = rows.map(t=>{
+        const p = state.products.find(p=>p.id===t.productId);
+        const v = p ? p.variants.find(x=>x.id===t.variantId) : null;
+        return `<tr>
+          <td>${new Date(t.date).toLocaleString()}</td>
+          <td>${t.type}</td>
+          <td>${p ? p.name : '(deleted)'}</td>
+          <td>${v ? v.name : '(deleted)'}</td>
+          <td>${t.qty}</td>
+          <td>${t.note || ''}</td>
+        </tr>`;
+      }).join('') || '<tr><td colspan="6" class="muted">No transactions</td></tr>';
+    }
+    applyFilterBtn.addEventListener('click', ()=> renderTransactions());
+    exportTransBtn.addEventListener('click', ()=> {
+      // Export visible transactions as CSV
+      const rows = Array.from(transTableBody.querySelectorAll('tr')).map(tr=>{
+        return Array.from(tr.children).map(td => td.textContent.replace(/\n/g,' ').trim());
+      });
+      if(rows.length===0) return alert('No rows to export');
+      const csv = rows.map(r => r.map(c => `"${c.replace(/"/g,'""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], {type:'text/csv'}); const url = URL.createObjectURL(blob);
+      const a = document.createElement('a'); a.href=url; a.download = 'transactions.csv'; document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+    });
+
+    // Report
+    function renderReport(){
+      const sel = reportProductSel.value;
+      const rows = [];
+      state.products.forEach(p=>{
+        if(sel !== 'all' && p.id !== sel) return;
+        p.variants.forEach(v=>{
+          // compute sums from transactions
+          const ins = state.transactions.filter(t=>t.productId===p.id && t.variantId===v.id && t.type==='in').reduce((s,t)=>s+t.qty,0);
+          const outs = state.transactions.filter(t=>t.productId===p.id && t.variantId===v.id && (t.type==='out' || t.type==='auto')).reduce((s,t)=>s+t.qty,0);
+          const opening = (v.opening || 0); // we don't store separate opening per month here, but initial stock belonged in variant.stock initially
+          rows.push({product:p.name, variant:v.name, opening:opening, in:ins, out:outs, current:v.stock, daily:v.expectedDailyOut});
+        });
+      });
+      reportTableBody.innerHTML = rows.map(r=>`<tr>
+        <td>${r.product}</td>
+        <td>${r.variant}</td>
+        <td>${r.opening}</td>
+        <td>${r.in}</td>
+        <td>${r.out}</td>
+        <td>${r.current}</td>
+        <td>${r.daily}</td>
+      </tr>`).join('') || '<tr><td colspan="7" class="muted">No data</td></tr>';
+    }
+
+    // Initialize date inputs with reasonable defaults
+    (() => {
+      const d = new Date();
+      const start = new Date(d.getFullYear(), d.getMonth(), 1);
+      transStart.value = start.toISOString().slice(0,10);
+      transEnd.value = todayDateStr();
+    })();
+
+    // Load saved state on boot
+    refreshUI();
+
+    // Extra: export/import via remote small UI
+    // Also set up keyboard shortcuts
+    window.addEventListener('keydown', (e)=>{
+      if(e.ctrlKey && e.key==='s'){ e.preventDefault(); alert('Local saved'); save(state); }
+    });
+
+    // Provide a function to safely update variant stocks externally if needed
+    window.__stockManager = {
+      state,
+      save,
+      refreshUI,
+      addProduct: (name)=>{ state.products.push({id:uid('p'), name, variants:[]}); save(state); refreshUI(); },
+      addVariantToProduct: (productId, name, stock=0, daily=0) => {
+        const p = state.products.find(x=>x.id===productId); if(!p) return null;
+        const v = {id: uid('v'), name, stock, expectedDailyOut:daily}; p.variants.push(v);
+        if(stock>0) pushTransaction({type:'in', productId, variantId:v.id, qty:stock, note:'Initial import'});
+        save(state); refreshUI(); return v;
+      }
+    };
+
+  })();
+  </script>
+</body>
+</html>
+
